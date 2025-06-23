@@ -1,0 +1,137 @@
+#include <gtk/gtk.h>
+
+static GtkWidget *info_label;
+static GtkWidget *image;
+static GtkWidget *state_dropdown;
+static GtkWidget *state_label;
+
+static void on_state_changed(GtkDropDown *dropdown, gpointer user_data) {
+    guint index = gtk_drop_down_get_selected(dropdown);
+    const char *state = gtk_string_list_get_string(GTK_STRING_LIST(gtk_drop_down_get_model(dropdown)), index);
+
+    const gchar *info_text = "";
+    const gchar *image_path = "";
+
+    if (g_strcmp0(state, "Kerala") == 0) {
+        info_text = "Places to visit in Kerala: Munnar, Alleppey, Kochi, Wayanad.";
+        image_path = "kerala.jpg";
+    } else if (g_strcmp0(state, "Rajasthan") == 0) {
+        info_text = "Places to visit in Rajasthan: Jaipur, Udaipur, Jaisalmer, Jodhpur.";
+        image_path = "rajasthan.jpg";
+    } else if (g_strcmp0(state, "West Bengal") == 0) {
+        info_text = "Places to visit in West Bengal: Darjeeling, Kolkata, Sunderbans, Kalimpong.";
+        image_path = "bengal.jpg";
+    } else {
+        gtk_label_set_text(GTK_LABEL(info_label), "");
+        gtk_image_clear(GTK_IMAGE(image));
+        return;
+    }
+
+    gtk_label_set_text(GTK_LABEL(info_label), info_text);
+    gtk_image_set_from_file(GTK_IMAGE(image), image_path);
+}
+
+static void on_country_changed(GtkDropDown *dropdown, gpointer user_data) {
+    guint index = gtk_drop_down_get_selected(dropdown);
+    const char *country = gtk_string_list_get_string(GTK_STRING_LIST(gtk_drop_down_get_model(dropdown)), index);
+
+    const gchar *info_text = "";
+    const gchar *image_path = "";
+
+    if (g_strcmp0(country, "Australia") == 0) {
+        info_text = "Best time to visit Australia: Sep–Nov & Mar–May.";
+        image_path = "australia.jpg";
+        gtk_widget_hide(state_dropdown);
+        gtk_widget_hide(state_label);
+    } else if (g_strcmp0(country, "India") == 0) {
+        info_text = "Best time to visit India: October to March.";
+        image_path = "india.jpg";
+        gtk_widget_show(state_label);
+        gtk_widget_show(state_dropdown);
+        gtk_drop_down_set_selected(GTK_DROP_DOWN(state_dropdown), 0);
+    } else if (g_strcmp0(country, "France") == 0) {
+        info_text = "Best time to visit France: Apr–Jun & Sep–Nov.";
+        image_path = "france.jpg";
+        gtk_widget_hide(state_dropdown);
+        gtk_widget_hide(state_label);
+    } else if (g_strcmp0(country, "Egypt") == 0) {
+        info_text = "Best time to visit Egypt: October to April.";
+        image_path = "egypt.jpg";
+        gtk_widget_hide(state_dropdown);
+        gtk_widget_hide(state_label);
+    } else if (g_strcmp0(country, "Italy") == 0) {
+        info_text = "Best time to visit Italy: Apr–Jun & Sep–Oct.";
+        image_path = "italy.jpg";
+        gtk_widget_hide(state_dropdown);
+        gtk_widget_hide(state_label);
+    } else {
+        gtk_label_set_text(GTK_LABEL(info_label), "");
+        gtk_image_clear(GTK_IMAGE(image));
+        gtk_widget_hide(state_dropdown);
+        gtk_widget_hide(state_label);
+        return;
+    }
+
+    gtk_label_set_text(GTK_LABEL(info_label), info_text);
+    gtk_image_set_from_file(GTK_IMAGE(image), image_path);
+}
+
+static void activate(GtkApplication *app, gpointer user_data) {
+    GtkWidget *window = gtk_application_window_new(app);
+    gtk_window_set_title(GTK_WINDOW(window), "TourMate");
+    gtk_window_set_default_size(GTK_WINDOW(window), 600, 500);
+
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_widget_set_margin_top(box, 20);
+    gtk_widget_set_margin_bottom(box, 20);
+    gtk_widget_set_margin_start(box, 20);
+    gtk_widget_set_margin_end(box, 20);
+    gtk_window_set_child(GTK_WINDOW(window), box);
+
+    // Apply CSS
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_string(provider,
+        "* { font-weight: bold; color: #003366; font-size: 14px; }"
+        "window { background-color: #dfffe0; }");
+    GtkStyleContext *context = gtk_widget_get_style_context(window);
+    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+    GtkWidget *label = gtk_label_new("Select a country:");
+    gtk_box_append(GTK_BOX(box), label);
+
+    GListModel *country_model = G_LIST_MODEL(gtk_string_list_new((const char*[]){"Select", "Australia", "India", "France", "Egypt", "Italy", NULL}));
+    GtkWidget *country_dropdown = gtk_drop_down_new(country_model, NULL);
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(country_dropdown), 0);
+    gtk_box_append(GTK_BOX(box), country_dropdown);
+
+    state_label = gtk_label_new("Select a state:");
+    gtk_box_append(GTK_BOX(box), state_label);
+
+    GListModel *state_model = G_LIST_MODEL(gtk_string_list_new((const char*[]){"Select a state", "Kerala", "Rajasthan","West Bengal", NULL}));
+    state_dropdown = gtk_drop_down_new(state_model, NULL);
+    gtk_box_append(GTK_BOX(box), state_dropdown);
+
+    gtk_widget_hide(state_label);
+    gtk_widget_hide(state_dropdown);
+
+    info_label = gtk_label_new("");
+    gtk_label_set_wrap(GTK_LABEL(info_label), TRUE);
+    gtk_box_append(GTK_BOX(box), info_label);
+
+    image = gtk_image_new();
+    gtk_widget_set_size_request(image, 300, 200);
+    gtk_box_append(GTK_BOX(box), image);
+
+    g_signal_connect(country_dropdown, "notify::selected", G_CALLBACK(on_country_changed), NULL);
+    g_signal_connect(state_dropdown, "notify::selected", G_CALLBACK(on_state_changed), NULL);
+
+    gtk_window_present(GTK_WINDOW(window));
+}
+
+int main(int argc, char **argv) {
+    GtkApplication *app = gtk_application_new("com.tourmate.app", G_APPLICATION_DEFAULT_FLAGS);
+    g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
+    int status = g_application_run(G_APPLICATION(app), argc, argv);
+    g_object_unref(app);
+    return status;
+}
